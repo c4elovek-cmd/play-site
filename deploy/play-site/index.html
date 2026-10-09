@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SaperCraft | Игровой сервер 1.20.1</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Rubik+Maze&display=swap" rel="stylesheet">
+    
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background-color: #000000; color: #ffffff; display: flex; flex-direction: column; align-items: center; min-height: 100vh; overflow-x: hidden; position: relative; padding: 40px 20px; justify-content: center;}
+
+        .orb-1, .orb-2 { position: fixed; border-radius: 50%; filter: blur(60px); z-index: 0; opacity: 0.6; pointer-events: none; }
+        .orb-1 { width: 350px; height: 350px; background: linear-gradient(135deg, #00ff88, #003311); top: -50px; left: -50px; }
+        .orb-2 { width: 400px; height: 400px; background: linear-gradient(135deg, #0088ff, #001133); bottom: -100px; right: -100px; }
+
+        .container { position: relative; z-index: 2; width: 100%; max-width: 420px; }
+        .glass-card { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(30px); border-radius: 32px; border: 1px solid rgba(255, 255, 255, 0.05); padding: 40px 25px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.8); }
+        
+        .status-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.05); padding: 6px 16px; border-radius: 20px; font-size: 13px; color: #a3a3a3; margin-bottom: 25px; border: 1px solid rgba(255,255,255,0.05); }
+        .pulse-dot { width: 8px; height: 8px; background: #00ff88; border-radius: 50%; box-shadow: 0 0 10px #00ff88; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; box-shadow: 0 0 10px #00ff88; } 50% { opacity: 0.4; box-shadow: 0 0 2px #00ff88; } 100% { opacity: 1; box-shadow: 0 0 10px #00ff88; } }
+
+        h1 { font-family: "Rubik Maze", system-ui, sans-serif; font-size: 42px; font-weight: normal; margin-bottom: 10px; text-shadow: 0 0 20px rgba(0, 255, 136, 0.3); letter-spacing: 2px; }
+        .subtitle { font-size: 15px; color: #9ca3af; margin-bottom: 30px; line-height: 1.5; }
+
+        .ip-box { background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(0, 255, 136, 0.3); border-radius: 16px; padding: 18px; margin-bottom: 30px; cursor: pointer; transition: 0.2s; display: flex; flex-direction: column; gap: 5px; }
+        .ip-box:hover { border-color: #00ff88; background: rgba(0, 255, 136, 0.05); transform: translateY(-2px); }
+        .ip-box:active { transform: scale(0.98); }
+        .ip-address { font-family: monospace; font-size: 20px; color: #00ff88; font-weight: bold; letter-spacing: 1px; }
+        .copy-hint { font-size: 12px; color: #6b7280; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; transition: 0.2s; }
+
+        .btn-grid { display: flex; flex-direction: column; gap: 12px; }
+        .btn { display: inline-block; width: 100%; padding: 16px; border-radius: 16px; text-decoration: none; font-size: 15px; font-weight: bold; transition: 0.2s; border: none; cursor: pointer; }
+        .btn-primary { background: #ffffff; color: #000000; box-shadow: 0 4px 15px rgba(255,255,255,0.1); }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255,255,255,0.3); }
+        .btn-secondary { background: #1a1a1a; color: #ffffff; border: 1px solid rgba(255,255,255,0.1); }
+        .btn-secondary:hover { background: #262626; border-color: rgba(255,255,255,0.2); }
+        
+        .back-link { display: inline-block; margin-top: 25px; color: #6b7280; text-decoration: none; font-size: 13px; transition: 0.2s; }
+        .back-link:hover { color: #ffffff; }
+    </style>
+</head>
+<body>
+    <div class="orb-1" id="orb1"></div>
+    <div class="orb-2" id="orb2"></div>
+
+    <div class="container">
+        <div class="glass-card">
+            
+            <div class="status-badge">
+                <div class="pulse-dot"></div>
+                Сервер онлайн (1.20.1)
+            </div>
+
+            <h1>SaperCraft</h1>
+            <div class="subtitle">Приватное выживание с модами.<br>Технологии, пушки и паркур.</div>
+
+            <div class="ip-box" onclick="copyIP()">
+                <div class="ip-address">play.c4elovek.online</div>
+                <div class="copy-hint" id="copy-hint">Нажми, чтобы скопировать IP</div>
+            </div>
+
+            <div class="btn-grid">
+                <a href="/mods/" class="btn btn-primary">📦 Скачать сборку модов</a>
+                <a href="https://c4elovek.online" class="btn btn-secondary">🌐 На главную визитку</a>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const orb1 = document.getElementById('orb1');
+        const orb2 = document.getElementById('orb2');
+
+        function moveOrbs() {
+            orb1.style.transition = 'transform 12s ease-in-out';
+            orb2.style.transition = 'transform 12s ease-in-out';
+            orb1.style.transform = `translate(${Math.floor(Math.random() * window.innerWidth/3)}px, ${Math.floor(Math.random() * window.innerHeight/3)}px) scale(${Math.random() * 0.4 + 0.8})`;
+            orb2.style.transform = `translate(-${Math.floor(Math.random() * window.innerWidth/3)}px, -${Math.floor(Math.random() * window.innerHeight/3)}px) scale(${Math.random() * 0.4 + 0.8})`;
+        }
+        
+        moveOrbs();
+        setInterval(moveOrbs, 12000);
+
+        function copyIP() {
+            navigator.clipboard.writeText("play.c4elovek.online").then(() => {
+                const hint = document.getElementById("copy-hint");
+                hint.innerText = "IP СКОПИРОВАН!";
+                hint.style.color = "#00ff88";
+                
+                setTimeout(() => {
+                    hint.innerText = "Нажми, чтобы скопировать IP";
+                    hint.style.color = "#6b7280";
+                }, 2000);
+            });
+        }
+    </script>
+</body>
+</html>
