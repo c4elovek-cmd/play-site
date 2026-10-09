@@ -13,7 +13,20 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; -webkit-tap-highlight-color: transparent; }
         body { background-color: #000000; color: #ffffff; display: flex; flex-direction: column; align-items: center; min-height: 100vh; overflow-x: hidden; position: relative; padding: 40px 20px; justify-content: center;}
 
-        .orb-1, .orb-2 { position: fixed; border-radius: 50%; filter: blur(50px); z-index: 0; opacity: 0.8; pointer-events: none; }
+        /* ── Браузерные поверхности: оформлены под палитру ── */
+        ::selection { background: rgba(0, 255, 136, 0.28); color: #ffffff; }
+        ::-webkit-scrollbar { width: 10px; height: 10px; }
+        ::-webkit-scrollbar-track { background: #05070a; }
+        ::-webkit-scrollbar-thumb { background: #1c2a24; border-radius: 99px; border: 2px solid #05070a; }
+        ::-webkit-scrollbar-thumb:hover { background: #27453a; }
+        :focus-visible { outline: 2px solid #00ff88; outline-offset: 3px; border-radius: 4px; }
+
+        html { color-scheme: dark; }
+
+        /* ── Сетка с искажением ── */
+        #grid { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+
+        .orb-1, .orb-2 { position: fixed; border-radius: 50%; filter: blur(50px); z-index: 1; opacity: 0.8; pointer-events: none; }
         .orb-1 { width: 320px; height: 320px; background: linear-gradient(135deg, #00ff88, #003311); top: -50px; left: -50px; }
         .orb-2 { width: 380px; height: 380px; background: linear-gradient(135deg, #0088ff, #001133); bottom: -100px; right: -100px; }
 
@@ -56,9 +69,15 @@
 
         .back-link { display: inline-block; margin-top: 26px; color: #9ca3af; text-decoration: none; font-size: 14px; }
         .back-link:hover { color: #fff; }
+
+        /* ── Сниженная моторика ── */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+        }
     </style>
 </head>
 <body>
+    <canvas id="grid" aria-hidden="true"></canvas>
     <div class="orb-1" id="orb1"></div>
     <div class="orb-2" id="orb2"></div>
 
@@ -149,18 +168,144 @@
     </div>
 
     <script>
-        const orb1 = document.getElementById('orb1');
-        const orb2 = document.getElementById('orb2');
+    (function () {
+        'use strict';
+
+        var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        /* ── Орбы ── */
+        var orb1 = document.getElementById('orb1');
+        var orb2 = document.getElementById('orb2');
 
         function moveOrbs() {
+            if (reduceMotion) return;
             orb1.style.transition = 'transform 10s ease-in-out';
             orb2.style.transition = 'transform 10s ease-in-out';
-            orb1.style.transform = `translate(${Math.floor(Math.random() * window.innerWidth) - 150}px, ${Math.floor(Math.random() * window.innerHeight) - 150}px) scale(${Math.random() * 0.5 + 0.8})`;
-            orb2.style.transform = `translate(${Math.floor(Math.random() * window.innerWidth) - 150}px, ${Math.floor(Math.random() * window.innerHeight) - 150}px) scale(${Math.random() * 0.5 + 0.8})`;
+            orb1.style.transform = 'translate(' + (Math.floor(Math.random() * window.innerWidth) - 150) + 'px,' + (Math.floor(Math.random() * window.innerHeight) - 150) + 'px) scale(' + (Math.random() * 0.5 + 0.8) + ')';
+            orb2.style.transform = 'translate(' + (Math.floor(Math.random() * window.innerWidth) - 150) + 'px,' + (Math.floor(Math.random() * window.innerHeight) - 150) + 'px) scale(' + (Math.random() * 0.5 + 0.8) + ')';
         }
-        
         moveOrbs();
         setInterval(moveOrbs, 10000);
+
+        /* ── Interactive Grid Distortion ── */
+        var canvas = document.getElementById('grid');
+        var ctx = canvas.getContext('2d', { alpha: true });
+
+        var STEP = 22;
+        var RADIUS = 190;
+        var STRENGTH = 26;
+        var EASE = 0.14;
+
+        var w = 0, h = 0, dpr = 1;
+        var pointer = { x: -9999, y: -9999, tx: -9999, ty: -9999 };
+        var boost = 0, boostTarget = 0;
+        var visible = true;
+        var p = [0, 0, 0];
+
+        function resize() {
+            dpr = Math.min(window.devicePixelRatio || 1, 2);
+            w = window.innerWidth;
+            h = window.innerHeight;
+            canvas.width = Math.round(w * dpr);
+            canvas.height = Math.round(h * dpr);
+            canvas.style.width = w + 'px';
+            canvas.style.height = h + 'px';
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            draw();
+        }
+
+        function push(x, y, out) {
+            var dx = x - pointer.x;
+            var dy = y - pointer.y;
+            var dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist >= RADIUS || dist === 0) { out[0] = x; out[1] = y; out[2] = 0; return; }
+            var falloff = 1 - dist / RADIUS;
+            var force = falloff * falloff * (STRENGTH + boost);
+            out[0] = x + (dx / dist) * force;
+            out[1] = y + (dy / dist) * force;
+            out[2] = falloff;
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, w, h);
+            var cols = Math.ceil(w / STEP) + 1;
+            var rows = Math.ceil(h / STEP) + 1;
+            var i, j, lit, a;
+
+            for (i = 0; i < cols; i++) {
+                var x0 = i * STEP - (w % STEP) / 2;
+                lit = 0;
+                ctx.beginPath();
+                for (j = 0; j < rows; j++) {
+                    push(x0, j * STEP, p);
+                    if (j === 0) ctx.moveTo(p[0], p[1]); else ctx.lineTo(p[0], p[1]);
+                    lit += p[2];
+                }
+                a = 0.055 + Math.min(lit * 0.02, 0.5);
+                ctx.strokeStyle = 'rgba(' + (lit > 0.01 ? '0,255,136' : '255,255,255') + ',' + a.toFixed(3) + ')';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+
+            for (i = 0; i < rows; i++) {
+                var y1 = i * STEP - (h % STEP) / 2;
+                lit = 0;
+                ctx.beginPath();
+                for (j = 0; j < cols; j++) {
+                    push(j * STEP - (w % STEP) / 2, y1, p);
+                    if (j === 0) ctx.moveTo(p[0], p[1]); else ctx.lineTo(p[0], p[1]);
+                    lit += p[2];
+                }
+                a = 0.055 + Math.min(lit * 0.02, 0.5);
+                ctx.strokeStyle = 'rgba(' + (lit > 0.01 ? '0,255,136' : '255,255,255') + ',' + a.toFixed(3) + ')';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+        }
+
+        function tick() {
+            pointer.x += (pointer.tx - pointer.x) * EASE;
+            pointer.y += (pointer.ty - pointer.y) * EASE;
+            boost += (boostTarget - boost) * 0.1;
+            draw();
+            if (visible) requestAnimationFrame(tick);
+        }
+
+        window.addEventListener('pointermove', function (e) {
+            pointer.tx = e.clientX;
+            pointer.ty = e.clientY;
+        }, { passive: true });
+
+        window.addEventListener('pointerleave', function () {
+            pointer.tx = -9999;
+            pointer.ty = -9999;
+        });
+
+        document.querySelectorAll('.btn, .back-link').forEach(function (el) {
+            el.addEventListener('pointerenter', function () { boostTarget = 26; });
+            el.addEventListener('pointerleave', function () { boostTarget = 0; });
+        });
+
+        var resizeTimer;
+        window.addEventListener('resize', function () {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(resize, 120);
+        });
+
+        document.addEventListener('visibilitychange', function () {
+            visible = !document.hidden;
+            if (visible) requestAnimationFrame(tick);
+        });
+
+        resize();
+
+        if (reduceMotion) {
+            pointer.x = pointer.tx = -9999;
+            draw();
+        } else {
+            requestAnimationFrame(tick);
+        }
+    })();
     </script>
 </body>
 </html>

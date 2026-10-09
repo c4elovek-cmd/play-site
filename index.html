@@ -2,55 +2,138 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>SaperCraft | Игровой сервер 1.20.1</title>
-    
+    <meta name="description" content="SaperCraft — приватный survival-сервер Minecraft 1.20.1 с модами: технологии, оружие и паркур.">
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Rubik+Maze&display=swap" rel="stylesheet">
-    
+
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; -webkit-tap-highlight-color: transparent; }
-        body { background-color: #000000; color: #ffffff; display: flex; flex-direction: column; align-items: center; min-height: 100vh; overflow-x: hidden; position: relative; padding: 40px 20px; justify-content: center;}
 
-        .orb-1, .orb-2 { position: fixed; border-radius: 50%; filter: blur(60px); z-index: 0; opacity: 0.6; pointer-events: none; }
+        :root {
+            --ink:        #ffffff;
+            --ink-soft:   #9ca3af;
+            --ink-faint:  #8a94a6;   /* поднят с #6b7280 — был 4.2:1 на чёрном */
+            --accent:     #00ff88;
+            --cell:       44px;
+        }
+
+        html { color-scheme: dark; }
+
+        body {
+            background-color: #000000;
+            color: var(--ink);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+            padding: 40px 20px;
+            justify-content: center;
+        }
+
+        /* ── Браузерные поверхности: оформлены под палитру, а не оставлены по умолчанию ── */
+        ::selection { background: rgba(0, 255, 136, 0.28); color: #ffffff; }
+        ::-webkit-scrollbar { width: 10px; height: 10px; }
+        ::-webkit-scrollbar-track { background: #05070a; }
+        ::-webkit-scrollbar-thumb { background: #1c2a24; border-radius: 99px; border: 2px solid #05070a; }
+        ::-webkit-scrollbar-thumb:hover { background: #27453a; }
+        :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+
+        /* ── Сетка с искажением ── */
+        #grid {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .orb-1, .orb-2 { position: fixed; border-radius: 50%; filter: blur(60px); z-index: 1; opacity: 0.55; pointer-events: none; }
         .orb-1 { width: 350px; height: 350px; background: linear-gradient(135deg, #00ff88, #003311); top: -50px; left: -50px; }
         .orb-2 { width: 400px; height: 400px; background: linear-gradient(135deg, #0088ff, #001133); bottom: -100px; right: -100px; }
 
         .container { position: relative; z-index: 2; width: 100%; max-width: 420px; }
-        .glass-card { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(30px); border-radius: 32px; border: 1px solid rgba(255, 255, 255, 0.05); padding: 40px 25px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.8); }
-        
-        .status-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.05); padding: 6px 16px; border-radius: 20px; font-size: 13px; color: #a3a3a3; margin-bottom: 25px; border: 1px solid rgba(255,255,255,0.05); }
-        .pulse-dot { width: 8px; height: 8px; background: #00ff88; border-radius: 50%; box-shadow: 0 0 10px #00ff88; animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { opacity: 1; box-shadow: 0 0 10px #00ff88; } 50% { opacity: 0.4; box-shadow: 0 0 2px #00ff88; } 100% { opacity: 1; box-shadow: 0 0 10px #00ff88; } }
 
-        h1 { font-family: "Rubik Maze", system-ui, sans-serif; font-size: 42px; font-weight: normal; margin-bottom: 10px; text-shadow: 0 0 20px rgba(0, 255, 136, 0.3); letter-spacing: 2px; }
-        .subtitle { font-size: 15px; color: #9ca3af; margin-bottom: 30px; line-height: 1.5; }
+        .glass-card {
+            background: rgba(10, 12, 14, 0.55);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            border-radius: 32px;
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            padding: 40px 25px;
+            text-align: center;
+            box-shadow: 0 30px 70px -20px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(0, 255, 136, 0.04);
+        }
 
-        .ip-box { background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(0, 255, 136, 0.3); border-radius: 16px; padding: 18px; margin-bottom: 30px; cursor: pointer; transition: 0.2s; display: flex; flex-direction: column; gap: 5px; }
-        .ip-box:hover { border-color: #00ff88; background: rgba(0, 255, 136, 0.05); transform: translateY(-2px); }
+        .status-badge {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: rgba(255,255,255,0.05); padding: 6px 16px; border-radius: 20px;
+            font-size: 13px; color: var(--ink-soft); margin-bottom: 25px;
+            border: 1px solid rgba(255,255,255,0.07);
+        }
+        .pulse-dot { width: 8px; height: 8px; background: var(--accent); border-radius: 50%; box-shadow: 0 0 10px var(--accent); animation: pulse 2.4s cubic-bezier(0.4, 0, 0.2, 1) infinite; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1;    box-shadow: 0 0 10px var(--accent); }
+            50%      { opacity: 0.45; box-shadow: 0 0 2px  var(--accent); }
+        }
+
+        h1 {
+            font-family: "Rubik Maze", system-ui, sans-serif;
+            font-size: 42px; font-weight: normal; margin-bottom: 10px;
+            text-shadow: 0 0 24px rgba(0, 255, 136, 0.25); letter-spacing: 2px;
+        }
+        .subtitle { font-size: 15px; color: var(--ink-soft); margin-bottom: 30px; line-height: 1.55; }
+
+        .ip-box {
+            background: rgba(0, 0, 0, 0.55);
+            border: 1px solid rgba(0, 255, 136, 0.28);
+            border-radius: 16px; padding: 18px; margin-bottom: 30px;
+            cursor: pointer; transition: transform .2s cubic-bezier(0.16, 1, 0.3, 1), border-color .2s, background .2s;
+            display: flex; flex-direction: column; gap: 5px;
+            width: 100%; text-align: center; color: inherit; font: inherit;
+        }
+        .ip-box:hover { border-color: var(--accent); background: rgba(0, 255, 136, 0.05); transform: translateY(-2px); }
         .ip-box:active { transform: scale(0.98); }
-        .ip-address { font-family: monospace; font-size: 20px; color: #00ff88; font-weight: bold; letter-spacing: 1px; }
-        .copy-hint { font-size: 12px; color: #6b7280; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; transition: 0.2s; }
+        .ip-address { font-family: monospace; font-size: 20px; color: var(--accent); font-weight: bold; letter-spacing: 1px; }
+        .copy-hint { font-size: 12px; color: var(--ink-faint); font-weight: bold; text-transform: uppercase; letter-spacing: 1px; transition: color .2s; }
 
         .btn-grid { display: flex; flex-direction: column; gap: 12px; }
-        .btn { display: inline-block; width: 100%; padding: 16px; border-radius: 16px; text-decoration: none; font-size: 15px; font-weight: bold; transition: 0.2s; border: none; cursor: pointer; }
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+            width: 100%; padding: 16px; border-radius: 16px; text-decoration: none;
+            font-size: 15px; font-weight: bold; border: none; cursor: pointer;
+            transition: transform .2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow .2s, background .2s;
+        }
+        .btn svg { width: 18px; height: 18px; flex-shrink: 0; }
         .btn-primary { background: #ffffff; color: #000000; box-shadow: 0 4px 15px rgba(255,255,255,0.1); }
-        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255,255,255,0.3); }
-        .btn-secondary { background: #1a1a1a; color: #ffffff; border: 1px solid rgba(255,255,255,0.1); }
-        .btn-secondary:hover { background: #262626; border-color: rgba(255,255,255,0.2); }
-        
-        .back-link { display: inline-block; margin-top: 25px; color: #6b7280; text-decoration: none; font-size: 13px; transition: 0.2s; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(255,255,255,0.28); }
+        .btn-secondary { background: #14171a; color: #ffffff; border: 1px solid rgba(255,255,255,0.12); }
+        .btn-secondary:hover { background: #1c2126; border-color: rgba(255,255,255,0.22); transform: translateY(-2px); }
+
+        .back-link { display: inline-block; margin-top: 25px; color: var(--ink-faint); text-decoration: none; font-size: 13px; transition: color .2s; }
         .back-link:hover { color: #ffffff; }
+
+        /* ── Сниженная моторика: сетка остаётся, но не шевелится ── */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+            .pulse-dot { opacity: 1; }
+        }
     </style>
 </head>
 <body>
+    <canvas id="grid" aria-hidden="true"></canvas>
     <div class="orb-1" id="orb1"></div>
     <div class="orb-2" id="orb2"></div>
 
-    <div class="container">
+    <main class="container">
         <div class="glass-card">
-            
+
             <div class="status-badge">
                 <div class="pulse-dot"></div>
                 Сервер онлайн (1.20.1)
@@ -59,45 +142,205 @@
             <h1>SaperCraft</h1>
             <div class="subtitle">Приватное выживание с модами.<br>Технологии, пушки и паркур.</div>
 
-            <div class="ip-box" onclick="copyIP()">
-                <div class="ip-address">play.c4elovek.online</div>
-                <div class="copy-hint" id="copy-hint">Нажми, чтобы скопировать IP</div>
-            </div>
+            <button class="ip-box" type="button" id="ip-box">
+                <span class="ip-address">play.c4elovek.online</span>
+                <span class="copy-hint" id="copy-hint">Нажми, чтобы скопировать IP</span>
+            </button>
 
             <div class="btn-grid">
-                <a href="/mods/" class="btn btn-primary">📦 Скачать сборку модов</a>
-                <a href="https://c4elovek.online" class="btn btn-secondary">🌐 На главную визитку</a>
+                <a href="/mods/" class="btn btn-primary">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M21 8v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8"/>
+                        <path d="M1 3h22l-3 5H4z"/><path d="M10 12h4"/>
+                    </svg>
+                    Скачать сборку модов
+                </a>
+                <a href="https://c4elovek.online" class="btn btn-secondary">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="12" r="10"/><path d="M2 12h20"/>
+                        <path d="M12 2a15.3 15.3 0 0 1 0 20a15.3 15.3 0 0 1 0-20z"/>
+                    </svg>
+                    На главную визитку
+                </a>
             </div>
 
         </div>
-    </div>
+    </main>
 
     <script>
-        const orb1 = document.getElementById('orb1');
-        const orb2 = document.getElementById('orb2');
+    (function () {
+        'use strict';
+
+        var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        /* ── Орбы: медленный дрейф, как раньше ── */
+        var orb1 = document.getElementById('orb1');
+        var orb2 = document.getElementById('orb2');
 
         function moveOrbs() {
+            if (reduceMotion) return;
             orb1.style.transition = 'transform 12s ease-in-out';
             orb2.style.transition = 'transform 12s ease-in-out';
-            orb1.style.transform = `translate(${Math.floor(Math.random() * window.innerWidth/3)}px, ${Math.floor(Math.random() * window.innerHeight/3)}px) scale(${Math.random() * 0.4 + 0.8})`;
-            orb2.style.transform = `translate(-${Math.floor(Math.random() * window.innerWidth/3)}px, -${Math.floor(Math.random() * window.innerHeight/3)}px) scale(${Math.random() * 0.4 + 0.8})`;
+            orb1.style.transform = 'translate(' + Math.floor(Math.random() * window.innerWidth / 3) + 'px,' + Math.floor(Math.random() * window.innerHeight / 3) + 'px) scale(' + (Math.random() * 0.4 + 0.8) + ')';
+            orb2.style.transform = 'translate(-' + Math.floor(Math.random() * window.innerWidth / 3) + 'px,-' + Math.floor(Math.random() * window.innerHeight / 3) + 'px) scale(' + (Math.random() * 0.4 + 0.8) + ')';
         }
-        
         moveOrbs();
         setInterval(moveOrbs, 12000);
 
-        function copyIP() {
-            navigator.clipboard.writeText("play.c4elovek.online").then(() => {
-                const hint = document.getElementById("copy-hint");
-                hint.innerText = "IP СКОПИРОВАН!";
-                hint.style.color = "#00ff88";
-                
-                setTimeout(() => {
-                    hint.innerText = "Нажми, чтобы скопировать IP";
-                    hint.style.color = "#6b7280";
+        /* ── Копирование IP ── */
+        var ipBox = document.getElementById('ip-box');
+        var copyHint = document.getElementById('copy-hint');
+        var HINT_IDLE = 'Нажми, чтобы скопировать IP';
+
+        ipBox.addEventListener('click', function () {
+            if (!navigator.clipboard) return;
+            navigator.clipboard.writeText('play.c4elovek.online').then(function () {
+                copyHint.textContent = 'IP скопирован';
+                copyHint.style.color = '#00ff88';
+                setTimeout(function () {
+                    copyHint.textContent = HINT_IDLE;
+                    copyHint.style.color = '';
                 }, 2000);
             });
+        });
+
+        /* ── Interactive Grid Distortion ──
+           Сетка статична, пока курсор не подойдёт; рядом с ним линии
+           расступаются радиально и плавно возвращаются. Наведение на
+           интерактив усиливает прогиб — причина и следствие связаны. */
+        var canvas = document.getElementById('grid');
+        var ctx = canvas.getContext('2d', { alpha: true });
+
+        var CELL = 44;      // размер ячейки
+        var STEP = 22;      // шаг выборки точек (2 на ячейку)
+        var RADIUS = 190;   // радиус влияния курсора
+        var STRENGTH = 26;  // базовая сила прогиба
+        var EASE = 0.14;    // инерция указателя и возврат сетки
+
+        var w = 0, h = 0, dpr = 1;
+        var pointer = { x: -9999, y: -9999, tx: -9999, ty: -9999 };
+        var boost = 0, boostTarget = 0;
+        var visible = true;
+
+        function resize() {
+            dpr = Math.min(window.devicePixelRatio || 1, 2);
+            w = window.innerWidth;
+            h = window.innerHeight;
+            canvas.width = Math.round(w * dpr);
+            canvas.height = Math.round(h * dpr);
+            canvas.style.width = w + 'px';
+            canvas.style.height = h + 'px';
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            draw();
         }
+
+        // Смещение точки от курсора: радиальное отталкивание с затуханием (1 - d/R)^2
+        // out = [x, y, falloff]; falloff идёт в подсветку линии
+        function push(x, y, out) {
+            var dx = x - pointer.x;
+            var dy = y - pointer.y;
+            var dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist >= RADIUS || dist === 0) { out[0] = x; out[1] = y; out[2] = 0; return; }
+            var falloff = 1 - dist / RADIUS;
+            var force = falloff * falloff * (STRENGTH + boost);
+            out[0] = x + (dx / dist) * force;
+            out[1] = y + (dy / dist) * force;
+            out[2] = falloff;
+        }
+
+        var p = [0, 0];
+
+        function draw() {
+            ctx.clearRect(0, 0, w, h);
+
+            var near = 0;
+            var cols = Math.ceil(w / STEP) + 1;
+            var rows = Math.ceil(h / STEP) + 1;
+
+            // Вертикальные линии
+            for (var i = 0; i < cols; i++) {
+                var x0 = i * STEP - (w % STEP) / 2;
+                var lit = 0;
+                ctx.beginPath();
+                for (var j = 0; j < rows; j++) {
+                    var y0 = j * STEP;
+                    push(x0, y0, p);
+                    if (j === 0) ctx.moveTo(p[0], p[1]); else ctx.lineTo(p[0], p[1]);
+                    if (p[2]) lit += p[2];
+                }
+                var a = 0.055 + Math.min(lit * 0.02, 0.5);
+                ctx.strokeStyle = 'rgba(' + (lit > 0.01 ? '0,255,136' : '255,255,255') + ',' + a.toFixed(3) + ')';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                near = Math.max(near, lit);
+            }
+
+            // Горизонтальные линии
+            for (var k = 0; k < rows; k++) {
+                var y1 = k * STEP - (h % STEP) / 2;
+                var litH = 0;
+                ctx.beginPath();
+                for (var m = 0; m < cols; m++) {
+                    var x1 = m * STEP - (w % STEP) / 2;
+                    push(x1, y1, p);
+                    if (m === 0) ctx.moveTo(p[0], p[1]); else ctx.lineTo(p[0], p[1]);
+                    if (p[2]) litH += p[2];
+                }
+                var aH = 0.055 + Math.min(litH * 0.02, 0.5);
+                ctx.strokeStyle = 'rgba(' + (litH > 0.01 ? '0,255,136' : '255,255,255') + ',' + aH.toFixed(3) + ')';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                near = Math.max(near, litH);
+            }
+        }
+
+        function tick() {
+            pointer.x += (pointer.tx - pointer.x) * EASE;
+            pointer.y += (pointer.ty - pointer.y) * EASE;
+            boost += (boostTarget - boost) * 0.1;
+            draw();
+            if (visible) requestAnimationFrame(tick);
+        }
+
+        window.addEventListener('pointermove', function (e) {
+            pointer.tx = e.clientX;
+            pointer.ty = e.clientY;
+        }, { passive: true });
+
+        window.addEventListener('pointerleave', function () {
+            pointer.tx = -9999;
+            pointer.ty = -9999;
+        });
+
+        // Наведение на интерактив усиливает эффект — обратная связь
+        ['#ip-box', '.btn'].forEach(function (sel) {
+            document.querySelectorAll(sel).forEach(function (el) {
+                el.addEventListener('pointerenter', function () { boostTarget = 26; });
+                el.addEventListener('pointerleave', function () { boostTarget = 0; });
+            });
+        });
+
+        var resizeTimer;
+        window.addEventListener('resize', function () {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(resize, 120);
+        });
+
+        document.addEventListener('visibilitychange', function () {
+            visible = !document.hidden;
+            if (visible) requestAnimationFrame(tick);
+        });
+
+        resize();
+
+        if (reduceMotion) {
+            // Статичная сетка: рисуем один раз, без цикла анимации
+            pointer.x = pointer.tx = -9999;
+            draw();
+        } else {
+            requestAnimationFrame(tick);
+        }
+    })();
     </script>
 </body>
 </html>
